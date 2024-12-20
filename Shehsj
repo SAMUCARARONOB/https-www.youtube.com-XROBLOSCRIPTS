@@ -1,1 +1,137 @@
-9wi
+local player = game.Players.LocalPlayer
+local runService = game:GetService("RunService")
+local camera = game.Workspace.CurrentCamera
+
+local function getTeamColor(targetPlayer)
+    local team = targetPlayer.Team
+    if team then
+        return team.TeamColor.Color
+    else
+        return Color3.new(1, 1, 1)  -- Cor padrão (branco)
+    end
+end
+
+local function applyESP(targetPlayer)
+    local character = targetPlayer.Character or targetPlayer.CharacterAdded:Wait()
+    local espBox = character:FindFirstChild("ESPBox")
+    
+    if not espBox then
+        espBox = Instance.new("BoxHandleAdornment")
+        espBox.Name = "ESPBox"
+        espBox.Adornee = character
+        espBox.AlwaysOnTop = true
+        espBox.ZIndex = 10
+        espBox.Size = character:GetExtentsSize()
+        espBox.Transparency = 0.5
+        espBox.Parent = character
+    end
+    
+    espBox.Color3 = getTeamColor(targetPlayer)
+end
+
+local function updateESP()
+    for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+        if targetPlayer ~= player then
+            applyESP(targetPlayer)
+        end
+    end
+end
+
+local function removeAndReapplyESP()
+    for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+        if targetPlayer ~= player then
+            local character = targetPlayer.Character
+            if character then
+                local espBox = character:FindFirstChild("ESPBox")
+                if espBox then
+                    espBox:Destroy()
+                end
+            end
+        end
+    end
+    wait(0.01)
+    updateESP()
+end
+
+game.Players.PlayerAdded:Connect(function(newPlayer)
+    newPlayer.CharacterAdded:Connect(function()
+        removeAndReapplyESP()
+        applyESP(newPlayer)
+    end)
+end)
+
+runService.RenderStepped:Connect(function()
+    updateESP()
+end)
+
+local function isVisible(target)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local targetPart = target.Character and target.Character:FindFirstChild("Head")
+    
+    if targetPart then
+        local origin = camera.CFrame.Position
+        local direction = (targetPart.Position - origin).Unit * 1000
+        local ray = Ray.new(origin, direction)
+        local hitPart, hitPos = workspace:FindPartOnRayWithIgnoreList(ray, {character, camera})
+        
+        return hitPart and hitPart:IsDescendantOf(target.Character)
+    end
+    
+    return false
+end
+
+local function getClosestTarget()
+    local closestPlayer
+    local shortestDistance = math.huge
+
+    for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and targetPlayer.Character.Humanoid.Health > 0 and isVisible(targetPlayer) then
+            local targetColor = getTeamColor(targetPlayer)
+            local myColor = getTeamColor(player)
+            
+            -- Condição para modo todos contra todos (nome branco)
+            if myColor == Color3.new(1, 1, 1) and targetColor == Color3.new(1, 1, 1) then
+                local distance = (player.Character.PrimaryPart.Position - targetPlayer.Character.PrimaryPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = targetPlayer
+                end
+            
+            -- Condição para modo de equipe (cores diferentes)
+            elseif myColor ~= Color3.new(1, 1, 1) and myColor ~= targetColor then
+                local distance = (player.Character.PrimaryPart.Position - targetPlayer.Character.PrimaryPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = targetPlayer
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+local function aimAt(target)
+    if target and target.Character and target.Character:FindFirstChild("Head") then
+        local targetPart = target.Character.Head
+        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+    end
+end
+
+local currentTarget
+
+runService.RenderStepped:Connect(function()
+    updateESP()
+    local target = getClosestTarget()
+    if target ~= currentTarget then
+        currentTarget = target
+    end
+    aimAt(currentTarget)
+end)
+
+game.Players.PlayerAdded:Connect(function(newPlayer)
+    newPlayer.CharacterAdded:Connect(function()
+        removeAndReapplyESP()
+        applyESP(newPlayer)
+    end)
+end)
