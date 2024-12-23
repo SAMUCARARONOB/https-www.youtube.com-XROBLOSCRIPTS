@@ -116,18 +116,9 @@ local function aimAt(target)
     if target and target.Character and target.Character:FindFirstChild("Head") then
         local targetPart = target.Character.Head
         camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
-    end
-end
-
-local shooting = false
-
-local function shoot()
-    if not shooting then
-        shooting = true
-        virtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0) -- Simular clique do mouse (LMB)
-        wait(0.05) -- Intervalo entre tiros
-        virtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        shooting = false
+        virtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0) -- Segurar clique do mouse (LMB)
+    else
+        virtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0) -- Soltar clique do mouse (LMB)
     end
 end
 
@@ -140,9 +131,6 @@ runService.RenderStepped:Connect(function()
         currentTarget = target
     end
     aimAt(currentTarget)
-    if currentTarget then
-        shoot() -- Atirar no alvo
-    end
 end)
 
 game.Players.PlayerAdded:Connect(function(newPlayer)
