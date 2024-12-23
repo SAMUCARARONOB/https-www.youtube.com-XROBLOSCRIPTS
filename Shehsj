@@ -1,6 +1,7 @@
 local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 local camera = game.Workspace.CurrentCamera
+local virtualInputManager = game:GetService("VirtualInputManager")
 
 local function getTeamColor(targetPlayer)
     local team = targetPlayer.Team
@@ -118,6 +119,18 @@ local function aimAt(target)
     end
 end
 
+local shooting = false
+
+local function shoot()
+    if not shooting then
+        shooting = true
+        virtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0) -- Simular clique do mouse (LMB)
+        wait(0.05) -- Intervalo entre tiros
+        virtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        shooting = false
+    end
+end
+
 local currentTarget
 
 runService.RenderStepped:Connect(function()
@@ -127,6 +140,9 @@ runService.RenderStepped:Connect(function()
         currentTarget = target
     end
     aimAt(currentTarget)
+    if currentTarget then
+        shoot() -- Atirar no alvo
+    end
 end)
 
 game.Players.PlayerAdded:Connect(function(newPlayer)
